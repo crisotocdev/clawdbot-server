@@ -1,0 +1,150 @@
+========================================
+📘 CLAWDBOT – ROADMAP OFICIAL (Rust + Mobile)
+========================================
+
+Estado actual:
+✔ Servidor Rust funcionando
+✔ Comunicación TCP OK
+✔ Token validado
+✔ Respuesta correcta (PING → PONG)
+✔ Ejecución de programas locales probada
+
+----------------------------------------
+FASE 1 — BASE SÓLIDA (CONTROL LOCAL)
+----------------------------------------
+
+1.1 Limpieza y estabilidad
+- Mantener main.rs estable (sin tocar seguridad por ahora)
+- Confirmar que el servidor:
+  - No se cae con múltiples conexiones
+  - Responde siempre OK|PONG
+- Añadir logs claros por consola
+
+1.2 Comandos esenciales (hardcodeados)
+Implementar y probar uno por uno:
+
+- TOKEN|PING
+- TOKEN|NOTA          → abre Bloc de notas
+- TOKEN|VSCODE        → abre VS Code
+- TOKEN|CHROME        → abre Google Chrome
+- TOKEN|OPEN|RUTA     → abre una carpeta específica
+- TOKEN|LOCK          → bloquea Windows
+- TOKEN|SHUTDOWN      → apaga el PC (opcional, con cuidado)
+
+Regla:
+❌ NO ejecutar comandos libres
+✅ Solo comandos permitidos (lista blanca)
+
+----------------------------------------
+FASE 2 — POWERSHELL CONTROLADO
+----------------------------------------
+
+2.1 Acciones permitidas
+Agregar acciones PowerShell seguras:
+
+- TOKEN|PS|GET_TIME
+- TOKEN|PS|LIST_PROCESSES
+- TOKEN|PS|CPU_INFO
+- TOKEN|PS|IP_INFO
+
+2.2 Scripts propios
+- Crear carpeta: C:\Clawdbot\scripts\
+- Scripts .ps1 propios
+- Ejecutarlos solo por nombre (no texto libre)
+
+----------------------------------------
+FASE 3 — PROTOCOLO ROBUSTO
+----------------------------------------
+
+3.1 Nuevo formato de mensaje
+Migrar a:
+
+CLAWDBOT|v1|TOKEN|COMANDO|ARG|TIMESTAMP
+
+Ejemplo:
+CLAWDBOT|v1|CLAWDBOT_XXX|OPEN|CHROME|1700000000
+
+3.2 Validaciones
+- Versión válida
+- Token válido
+- Timestamp no repetido
+- Rechazar mensajes viejos
+
+----------------------------------------
+FASE 4 — CLIENTE MÓVIL SIMPLE
+----------------------------------------
+
+4.1 Cliente temporal
+Antes de React Native:
+- Script PowerShell
+- Script Python
+- Termux (cuando Play Protect lo permita)
+
+Objetivo:
+✔ Un botón → una acción
+
+4.2 Primera UI real
+- App simple con botones:
+  - Abrir Chrome
+  - Abrir VS Code
+  - Apagar PC
+  - Bloquear PC
+
+----------------------------------------
+FASE 5 — REACT NATIVE
+----------------------------------------
+
+5.1 App Clawdbot Mobile
+- Pantalla principal
+- Botones configurables
+- Input de texto libre (futuro IA)
+
+5.2 Configuración
+- IP del PC
+- Puerto
+- Token (encriptado local)
+
+----------------------------------------
+FASE 6 — INTELIGENCIA ARTIFICIAL
+----------------------------------------
+
+6.1 Flujo IA
+Texto natural → IA → comando estructurado
+
+Ejemplo:
+"Abre YouTube"
+↓
+IA → OPEN|CHROME|youtube.com
+
+6.2 Integración
+- API OpenAI / Claude
+- Rust hace la llamada
+- Rust decide si ejecuta o no
+
+----------------------------------------
+FASE 7 — SEGURIDAD REAL
+----------------------------------------
+
+7.1 Protección
+- Token rotativo
+- IP whitelist
+- Rate limit
+- Logs de acciones
+
+7.2 Modo seguro
+- Confirmación para comandos críticos
+- Doble validación para SHUTDOWN / DELETE
+
+----------------------------------------
+FASE 8 — FUTURO
+----------------------------------------
+
+- Automatización por horarios
+- Macros
+- Control remoto completo
+- Dashboard web
+- Modo servidor permanente (servicio Windows)
+
+========================================
+FIN DEL ROADMAP
+========================================
