@@ -1,128 +1,141 @@
-use std::io::{Write, BufRead, BufReader};
-use std::net::TcpListener;
-use std::process::Command;
+mod logger;
+mod auth;
+mod commands;
+mod powershell;
+// mod server; // ← ya no lo usamos por ahora (era TCP crudo)
 
-const TOKEN: &str = "CLAWDBOT_9F3A_2026_X7KQ_LMN82_SECURE";
+use axum::{
+    routing::{get, post},
+    Json, Router,
+    extract::ConnectInfo,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
-fn main() {
-    let direccion = "0.0.0.0:8080";
-    let listener = TcpListener::bind(direccion)
-        .expect("No se pudo iniciar el servidor");
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/ping", get(ping))
+        .route("/help", get(help))
+        .route("/cmd", post(cmd));
 
-    println!("🚀 Clawdbot Server iniciado en {}", direccion);
-    println!("📡 Esperando conexión...");
+    let addr = "0.0.0.0:8080";
+    println!("HTTP server iniciado en http://{addr}");
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                let mut reader = BufReader::new(&mut stream);
-                let mut mensaje = String::new();
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .expect("No se pudo bindear el puerto");
 
-                if reader.read_line(&mut mensaje).is_err() {
-                    let _ = stream.write_all(b"ERR|LECTURA_FALLIDA\n");
-                    continue;
-                }
-
-                let mensaje = mensaje.trim();
-                if mensaje.is_empty() {
-                    let _ = stream.write_all(b"ERR|MENSAJE_VACIO\n");
-                    continue;
-                }
-
-                println!("📱 Mensaje recibido: {}", mensaje);
-
-                let (ok, respuesta) = handle_message(mensaje);
-
-                let salida = if ok {
-                    format!("OK|{}\n", respuesta)
-                } else {
-                    format!("ERR|{}\n", respuesta)
-                };
-
-                let _ = stream.write_all(salida.as_bytes());
-            }
-
-            Err(e) => {
-                eprintln!("❌ Error de conexión: {}", e);
-            }
-        }
-    }
+    axum::serve(
+    listener,
+    app.into_make_service_with_connect_info::<SocketAddr>(),
+)
+        .await
+        .expect("Error levantando el servidor HTTP");
 }
 
-fn handle_message(msg: &str) -> (bool, String) {
-    // Formato esperado: TOKEN|COMANDO|ARG
-    let mut partes = msg.splitn(3, '|');
+// ---------- HANDLERS ----------
 
-    let token = partes.next().unwrap_or("");
-    let comando = partes.next().unwrap_or("").to_uppercase();
-    let argumento = partes.next().unwrap_or("").to_string();
-
-    if token != TOKEN {
-        return (false, "TOKEN_INVALIDO".to_string());
-    }
-
-    match comando.as_str() {
-        "PING" => (true, "PONG".to_string()),
-
-        "NOTA" => match Command::new("notepad.exe").spawn() {
-            Ok(_) => (true, "NOTEPAD_ABIERTO".to_string()),
-            Err(e) => (false, format!("ERROR_NOTEPAD: {}", e)),
-        },
-
-        "VSCODE" => {
-            if Command::new("cmd").args(["/C", "code"]).spawn().is_ok() {
-                return (true, "VSCODE_ABIERTO".to_string());
-            }
-
-            let ruta = r"C:\Program Files\Microsoft VS Code\Code.exe";
-            match Command::new(ruta).spawn() {
-                Ok(_) => (true, "VSCODE_ABIERTO".to_string()),
-                Err(e) => (false, format!("ERROR_VSCODE: {}", e)),
-            }
-        }
-
-        "CHROME" => {
-            let chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe";
-            match Command::new(chrome).spawn() {
-                Ok(_) => (true, "CHROME_ABIERTO".to_string()),
-                Err(e) => (false, format!("ERROR_CHROME: {}", e)),
-            }
-        }
-
-        "PS" => match ejecutar_powershell(&argumento) {
-            Ok(out) => (true, out),
-            Err(e) => (false, format!("ERROR_PS: {}", e)),
-        },
-
-        _ => (false, "COMANDO_DESCONOCIDO".to_string()),
-    }
+async fn ping() -> &'static str {
+    "PONG"
 }
 
-fn ejecutar_powershell(accion: &str) -> std::io::Result<String> {
-    let script = match accion.to_uppercase().as_str() {
-        "GET_TIME" => "Get-Date | Out-String",
-        "LIST_PROCESSES" => "Get-Process | Select-Object -First 10 | Out-String",
-        _ => return Ok("ACCION_NO_PERMITIDA".to_string()),
+#[derive(Deserialize)]
+struct CmdRequest {
+    token: String,
+    message: String,
+}
+
+#[derive(Serialize)]
+struct CmdResponse {
+    ok: bool,
+    command: String,
+    argument: String,
+    response: String,
+}
+
+async fn cmd(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(payload): Json<CmdRequest>,
+) -> Json<CmdResponse> {
+
+    let ip = addr.ip().to_string();
+
+    let msg = payload.message.trim();
+    let mut parts = msg.splitn(2, ' ');
+    let command = parts.next().unwrap_or("").to_uppercase();
+    let argument = parts.next().unwrap_or("").to_string();
+
+    let full_message = format!("{} {}", payload.token, payload.message);
+    let result = catch_unwind(AssertUnwindSafe(|| commands::handle_message(&full_message)));
+
+    let (ok, response) = match result {
+        Ok((ok, resp)) => (ok, resp),
+        Err(panic) => {
+            let msg = if let Some(s) = panic.downcast_ref::<&str>() {
+                s.to_string()
+            } else if let Some(s) = panic.downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "panic sin mensaje".to_string()
+            };
+
+            logger::log_text(&format!("PANIC /cmd: {}", msg));
+            (false, "ERROR_INTERNO_CMD".to_string())
+        }
     };
 
-    let output = Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
-            "-Command", script
-        ])
-        .output()?;
+    // Determinar rol para el log
+    let rol = match auth::rol(&payload.token) {
+        Some(auth::Rol::Admin) => "ADMIN",
+        Some(auth::Rol::User) => "USER",
+        None => "UNKNOWN",
+    };
 
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    // 👉 LOG REAL
+    logger::log(
+        &ip,
+        rol,
+        &command,
+        &argument,
+        ok,
+    );
 
-    if !output.status.success() {
-        return Ok(format!("STDERR: {}", stderr));
-    }
+    Json(CmdResponse {
+        ok,
+        command,
+        argument,
+        response,
+    })
+}
 
-    Ok(if stdout.is_empty() {
-        "OK".to_string()
-    } else {
-        stdout
+
+#[derive(Serialize)]
+struct HelpResponse {
+    name: &'static str,
+    version: &'static str,
+    endpoints: Vec<&'static str>,
+    commands: Vec<&'static str>,
+    format: &'static str,
+}
+
+async fn help() -> Json<HelpResponse> {
+    Json(HelpResponse {
+        name: "Clawdbot",
+        version: env!("CARGO_PKG_VERSION"),
+        endpoints: vec!["GET /ping", "GET /help", "POST /cmd"],
+        commands: vec![
+            "PING",
+            "NOTA",
+            "VSCODE",
+            "CHROME",
+            "PS <ACCION>",
+            "TIME",
+            "PROCESOS",
+            "WHOAMI",
+            "SYSINFO",
+        ],
+        format: r#"POST /cmd JSON: { "token": "...", "message": "PING" }"#,
     })
 }
