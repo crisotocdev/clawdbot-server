@@ -45,106 +45,69 @@ Agregar acciones PowerShell seguras:
 - TOKEN|PS|GET_TIME
 - TOKEN|PS|LIST_PROCESSES
 - TOKEN|PS|CPU_INFO
-- TOKEN|PS|IP_INFO
+PASOS A SEGUIR – DESDE EL PASO 4C (Clawdbot Server)
 
-2.2 Scripts propios
-- Crear carpeta: C:\Clawdbot\scripts\
-- Scripts .ps1 propios
-- Ejecutarlos solo por nombre (no texto libre)
+4C) Integrar y validar el módulo de autenticación
+- Revisar auth.rs y confirmar:
+  - Lectura correcta de variables de entorno (ADMIN_TOKEN, USER_TOKEN)
+  - Validación de token recibido desde el cliente
+  - Asignación correcta de roles (admin / user)
+- Probar manualmente:
+  - Con token válido
+  - Con token inválido
+  - Sin token
+- Verificar que accesos no autorizados se bloqueen correctamente
 
-----------------------------------------
-FASE 3 — PROTOCOLO ROBUSTO
-----------------------------------------
+4D) Integrar el servidor TCP con el sistema de autenticación
+- Confirmar que server.rs:
+  - Reciba conexiones TCP correctamente
+  - Solicite token al iniciar la conexión
+  - Bloquee la conexión si el token es inválido
+- Asegurar que el flujo sea:
+  conexión → autenticación → ejecución de comandos → respuesta
 
-3.1 Nuevo formato de mensaje
-Migrar a:
+4E) Validar ejecución de comandos según rol
+- Revisar commands.rs:
+  - Comandos permitidos para USER
+  - Comandos exclusivos para ADMIN
+- Verificar que:
+  - Un USER no pueda ejecutar comandos de ADMIN
+  - Un ADMIN tenga acceso completo
+- Probar comandos inválidos y confirmar manejo de errores
 
-CLAWDBOT|v1|TOKEN|COMANDO|ARG|TIMESTAMP
+4F) Integrar sistema de logging
+- Revisar logger.rs:
+  - Registro de conexiones entrantes
+  - Registro de autenticaciones exitosas y fallidas
+  - Registro de comandos ejecutados
+- Confirmar que los logs se escriban correctamente en la carpeta logs/
 
-Ejemplo:
-CLAWDBOT|v1|CLAWDBOT_XXX|OPEN|CHROME|1700000000
+4G) Pruebas funcionales completas
+- Ejecutar el servidor localmente
+- Probar conexión con cliente TCP (netcat o cliente propio)
+- Casos a probar:
+  - Token válido + comando permitido
+  - Token válido + comando prohibido
+  - Token inválido
+  - Comando inexistente
+- Confirmar que el servidor no se caiga ante errores
 
-3.2 Validaciones
-- Versión válida
-- Token válido
-- Timestamp no repetido
-- Rechazar mensajes viejos
+4H) Limpieza y hardening básico
+- Revisar manejo de errores (unwrap innecesarios)
+- Evitar prints innecesarios en producción
+- Verificar que no se filtren tokens en logs
+- Revisar permisos de archivos generados
 
-----------------------------------------
-FASE 4 — CLIENTE MÓVIL SIMPLE
-----------------------------------------
+4I) Commit final de la etapa 4
+- Ejecutar:
+  git status
+  git add .
+  git commit -m "Completa etapa 4: autenticación, servidor TCP y ejecución de comandos"
+  git push
 
-4.1 Cliente temporal
-Antes de React Native:
-- Script PowerShell
-- Script Python
-- Termux (cuando Play Protect lo permita)
-
-Objetivo:
-✔ Un botón → una acción
-
-4.2 Primera UI real
-- App simple con botones:
-  - Abrir Chrome
-  - Abrir VS Code
-  - Apagar PC
-  - Bloquear PC
-
-----------------------------------------
-FASE 5 — REACT NATIVE
-----------------------------------------
-
-5.1 App Clawdbot Mobile
-- Pantalla principal
-- Botones configurables
-- Input de texto libre (futuro IA)
-
-5.2 Configuración
-- IP del PC
-- Puerto
-- Token (encriptado local)
-
-----------------------------------------
-FASE 6 — INTELIGENCIA ARTIFICIAL
-----------------------------------------
-
-6.1 Flujo IA
-Texto natural → IA → comando estructurado
-
-Ejemplo:
-"Abre YouTube"
-↓
-IA → OPEN|CHROME|youtube.com
-
-6.2 Integración
-- API OpenAI / Claude
-- Rust hace la llamada
-- Rust decide si ejecuta o no
-
-----------------------------------------
-FASE 7 — SEGURIDAD REAL
-----------------------------------------
-
-7.1 Protección
-- Token rotativo
-- IP whitelist
-- Rate limit
-- Logs de acciones
-
-7.2 Modo seguro
-- Confirmación para comandos críticos
-- Doble validación para SHUTDOWN / DELETE
-
-----------------------------------------
-FASE 8 — FUTURO
-----------------------------------------
-
-- Automatización por horarios
-- Macros
-- Control remoto completo
-- Dashboard web
-- Modo servidor permanente (servicio Windows)
-
-========================================
-FIN DEL ROADMAP
-========================================
+4J) Preparación para siguiente etapa
+- Definir si el siguiente paso será:
+  - Cliente TCP
+  - Cifrado de comunicación
+  - Sistema de permisos más avanzado
+  - Empaquetado / deployment

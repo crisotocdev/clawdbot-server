@@ -17,18 +17,19 @@ fn user_token() -> Option<String> {
 pub fn rol(token: &str) -> Option<Rol> {
     let t = token.trim();
 
-    let admin = admin_token();
-    let user = user_token();
+    // Evita aceptar tokens vacíos o solo espacios
+    if t.is_empty() {
+        return None;
+    }
 
-
-    if let Some(a) = admin {
-        if t == a {
+    if let Some(a) = admin_token() {
+        if t == a.trim() {
             return Some(Rol::Admin);
         }
     }
 
-    if let Some(u) = user {
-        if t == u {
+    if let Some(u) = user_token() {
+        if t == u.trim() {
             return Some(Rol::User);
         }
     }

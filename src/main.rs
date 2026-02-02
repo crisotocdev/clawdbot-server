@@ -5,9 +5,11 @@ mod powershell;
 // mod server; // ← ya no lo usamos por ahora (era TCP crudo)
 
 use axum::{
+    extract::ConnectInfo,
+    http::StatusCode,
+    response::IntoResponse,
     routing::{get, post},
     Json, Router,
-    extract::ConnectInfo,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -28,11 +30,11 @@ async fn main() {
         .expect("No se pudo bindear el puerto");
 
     axum::serve(
-    listener,
-    app.into_make_service_with_connect_info::<SocketAddr>(),
-)
-        .await
-        .expect("Error levantando el servidor HTTP");
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .expect("Error levantando el servidor HTTP");
 }
 
 // ---------- HANDLERS ----------
@@ -50,6 +52,7 @@ struct CmdRequest {
 #[derive(Serialize)]
 struct CmdResponse {
     ok: bool,
+    role: String,
     command: String,
     argument: String,
     response: String,
@@ -58,17 +61,36 @@ struct CmdResponse {
 async fn cmd(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<CmdRequest>,
-) -> Json<CmdResponse> {
-
+) -> impl IntoResponse {
     let ip = addr.ip().to_string();
 
+    // 1) AUTH: bloquear al inicio si token inválido
+    let role = match auth::rol(&payload.token) {
+        Some(r) => r,
+        None => {
+            // Log de auth fallida
+            logger::log(&ip, "UNKNOWN", "AUTH", "", false);
+
+            let body = Json(CmdResponse {
+                ok: false,
+                role: "UNKNOWN".to_string(),
+                command: "AUTH".to_string(),
+                argument: "".to_string(),
+                response: "UNAUTHORIZED".to_string(),
+            });
+
+            return (StatusCode::UNAUTHORIZED, body).into_response();
+        }
+    };
+
+    // 2) Parse del mensaje para el log
     let msg = payload.message.trim();
     let mut parts = msg.splitn(2, ' ');
     let command = parts.next().unwrap_or("").to_uppercase();
     let argument = parts.next().unwrap_or("").to_string();
 
-    let full_message = format!("{} {}", payload.token, payload.message);
-    let result = catch_unwind(AssertUnwindSafe(|| commands::handle_message(&full_message)));
+    // 3) Ejecutar comando (ahora sin token embebido)
+    let result = catch_unwind(AssertUnwindSafe(|| commands::handle_message(role, msg)));
 
     let (ok, response) = match result {
         Ok((ok, resp)) => (ok, resp),
@@ -86,30 +108,26 @@ async fn cmd(
         }
     };
 
-    // Determinar rol para el log
-    let rol = match auth::rol(&payload.token) {
-        Some(auth::Rol::Admin) => "ADMIN",
-        Some(auth::Rol::User) => "USER",
-        None => "UNKNOWN",
+    // 4) Rol en texto
+    let role_str = match role {
+        auth::Rol::Admin => "ADMIN",
+        auth::Rol::User => "USER",
     };
 
-    // 👉 LOG REAL
-    logger::log(
-        &ip,
-        rol,
-        &command,
-        &argument,
-        ok,
-    );
+    // 5) Log real
+    logger::log(&ip, role_str, &command, &argument, ok);
 
-    Json(CmdResponse {
+    // 6) Respuesta OK
+    let body = Json(CmdResponse {
         ok,
+        role: role_str.to_string(),
         command,
         argument,
         response,
-    })
-}
+    });
 
+    (StatusCode::OK, body).into_response()
+}
 
 #[derive(Serialize)]
 struct HelpResponse {
