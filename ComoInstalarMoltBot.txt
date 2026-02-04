@@ -1,0 +1,1 @@
+Si es Windows: iwr -useb https://molt.bot/install.ps1 | iex
