@@ -9,7 +9,7 @@ pub fn start() {
     let listener = TcpListener::bind(direccion)
         .expect("No se pudo iniciar el servidor");
 
-    println!("🚀 Clawdbot Server iniciado en {}", direccion);
+    println!("🚀 Moltbot Server iniciado en {}", direccion);
     println!("📡 Esperando conexión...");
 
     for stream in listener.incoming() {

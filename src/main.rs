@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use clawdbot_server::app;
+use moltbot_server::app;
 
 #[tokio::main]
 async fn main() {

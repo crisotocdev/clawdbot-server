@@ -112,7 +112,7 @@ struct HelpResponse {
 
 async fn help() -> Json<HelpResponse> {
     Json(HelpResponse {
-        name: "Clawdbot",
+        name: "moltbot",
         version: env!("CARGO_PKG_VERSION"),
         endpoints: vec!["GET /ping", "GET /help", "POST /cmd"],
         commands: vec![

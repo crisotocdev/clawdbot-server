@@ -2,112 +2,74 @@
 📘 CLAWDBOT – ROADMAP OFICIAL (Rust + Mobile)
 ========================================
 
-Estado actual:
-✔ Servidor Rust funcionando
-✔ Comunicación TCP OK
-✔ Token validado
-✔ Respuesta correcta (PING → PONG)
-✔ Ejecución de programas locales probada
+🔹 PASO 2 — Elegir siguiente etapa
 
-----------------------------------------
-FASE 1 — BASE SÓLIDA (CONTROL LOCAL)
-----------------------------------------
+Elegir UNA:
 
-1.1 Limpieza y estabilidad
-- Mantener main.rs estable (sin tocar seguridad por ahora)
-- Confirmar que el servidor:
-  - No se cae con múltiples conexiones
-  - Responde siempre OK|PONG
-- Añadir logs claros por consola
+A) Crear cliente (CLI o web)
+B) Seguridad avanzada
+C) Base de datos
 
-1.2 Comandos esenciales (hardcodeados)
-Implementar y probar uno por uno:
+🔹 PASO 3A — Si se elige CLIENTE
 
-- TOKEN|PING
-- TOKEN|NOTA          → abre Bloc de notas
-- TOKEN|VSCODE        → abre VS Code
-- TOKEN|CHROME        → abre Google Chrome
-- TOKEN|OPEN|RUTA     → abre una carpeta específica
-- TOKEN|LOCK          → bloquea Windows
-- TOKEN|SHUTDOWN      → apaga el PC (opcional, con cuidado)
+Crear app CLI simple en Rust o Node
 
-Regla:
-❌ NO ejecutar comandos libres
-✅ Solo comandos permitidos (lista blanca)
+Enviar POST a /cmd
 
-----------------------------------------
-FASE 2 — POWERSHELL CONTROLADO
-----------------------------------------
+Mostrar respuesta formateada
 
-2.1 Acciones permitidas
-Agregar acciones PowerShell seguras:
+Configurar token en archivo local
 
-- TOKEN|PS|GET_TIME
-- TOKEN|PS|LIST_PROCESSES
-- TOKEN|PS|CPU_INFO
-PASOS A SEGUIR – DESDE EL PASO 4C (Clawdbot Server)
+Resultado:
 
-4C) Integrar y validar el módulo de autenticación
-- Revisar auth.rs y confirmar:
-  - Lectura correcta de variables de entorno (ADMIN_TOKEN, USER_TOKEN)
-  - Validación de token recibido desde el cliente
-  - Asignación correcta de roles (admin / user)
-- Probar manualmente:
-  - Con token válido
-  - Con token inválido
-  - Sin token
-- Verificar que accesos no autorizados se bloqueen correctamente
+Controlar Clawdbot sin usar PowerShell
 
-4D) Integrar el servidor TCP con el sistema de autenticación
-- Confirmar que server.rs:
-  - Reciba conexiones TCP correctamente
-  - Solicite token al iniciar la conexión
-  - Bloquee la conexión si el token es inválido
-- Asegurar que el flujo sea:
-  conexión → autenticación → ejecución de comandos → respuesta
+🔹 PASO 3B — Si se elige SEGURIDAD
 
-4E) Validar ejecución de comandos según rol
-- Revisar commands.rs:
-  - Comandos permitidos para USER
-  - Comandos exclusivos para ADMIN
-- Verificar que:
-  - Un USER no pueda ejecutar comandos de ADMIN
-  - Un ADMIN tenga acceso completo
-- Probar comandos inválidos y confirmar manejo de errores
+Rate limit por IP
 
-4F) Integrar sistema de logging
-- Revisar logger.rs:
-  - Registro de conexiones entrantes
-  - Registro de autenticaciones exitosas y fallidas
-  - Registro de comandos ejecutados
-- Confirmar que los logs se escriban correctamente en la carpeta logs/
+Timeout real en ejecución de comandos
 
-4G) Pruebas funcionales completas
-- Ejecutar el servidor localmente
-- Probar conexión con cliente TCP (netcat o cliente propio)
-- Casos a probar:
-  - Token válido + comando permitido
-  - Token válido + comando prohibido
-  - Token inválido
-  - Comando inexistente
-- Confirmar que el servidor no se caiga ante errores
+Tokens desde archivo .env
 
-4H) Limpieza y hardening básico
-- Revisar manejo de errores (unwrap innecesarios)
-- Evitar prints innecesarios en producción
-- Verificar que no se filtren tokens en logs
-- Revisar permisos de archivos generados
+Rotación de tokens
 
-4I) Commit final de la etapa 4
-- Ejecutar:
-  git status
-  git add .
-  git commit -m "Completa etapa 4: autenticación, servidor TCP y ejecución de comandos"
-  git push
+Resultado:
 
-4J) Preparación para siguiente etapa
-- Definir si el siguiente paso será:
-  - Cliente TCP
-  - Cifrado de comunicación
-  - Sistema de permisos más avanzado
-  - Empaquetado / deployment
+Backend más resistente
+
+🔹 PASO 3C — Si se elige BASE DE DATOS
+
+Usar SQLite
+
+Tabla comandos ejecutados
+
+Tabla usuarios
+
+Tabla notas
+
+Resultado:
+
+Clawdbot persistente
+
+🔹 PASO 4 — Documentación
+
+README.md con:
+
+Instalación
+
+Variables de entorno
+
+Ejemplos curl / PowerShell
+
+Comandos soportados
+
+🔹 PASO 5 — Portfolio
+
+Limpiar repo
+
+Capturas de pantalla
+
+Descripción del proyecto
+
+Subir a GitHub

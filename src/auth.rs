@@ -7,11 +7,11 @@ pub enum Rol {
 }
 
 fn admin_token() -> Option<String> {
-    env::var("CLAWDBOT_ADMIN_TOKEN").ok()
+    env::var("MOLTBOT_ADMIN_TOKEN").ok()
 }
 
 fn user_token() -> Option<String> {
-    env::var("CLAWDBOT_USER_TOKEN").ok()
+    env::var("MOLTBOT_USER_TOKEN").ok()
 }
 
 pub fn rol(token: &str) -> Option<Rol> {

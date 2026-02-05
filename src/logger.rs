@@ -3,7 +3,7 @@ use std::fs::{create_dir_all, OpenOptions};
 use std::io::Write;
 
 const LOG_DIR: &str = "logs";
-const LOG_PREFIX: &str = "clawdbot";
+const LOG_PREFIX: &str = "moltbot";
 
 fn log_path_for_today() -> String {
     let date = Local::now().format("%Y-%m-%d").to_string();
