@@ -15,6 +15,8 @@ pub fn build_router() -> Router {
     Router::new()
         .route("/ping", get(ping))
         .route("/help", get(help))
+        .route("/status", get(status))
+        .route("/login", post(login))
         .route("/cmd", post(cmd))
 }
 
@@ -22,6 +24,99 @@ pub fn build_router() -> Router {
 
 async fn ping() -> &'static str {
     "PONG"
+}
+
+#[derive(Serialize)]
+struct StatusResponse {
+    name: &'static str,
+    version: &'static str,
+    online: bool,
+}
+
+async fn status() -> Json<StatusResponse> {
+    Json(StatusResponse {
+        name: "Moltbot IA",
+        version: env!("CARGO_PKG_VERSION"),
+        online: true,
+    })
+}
+
+#[derive(Deserialize)]
+struct LoginRequest {
+    user: String,
+    pass: String,
+}
+
+#[derive(Serialize)]
+struct LoginResponse {
+    ok: bool,
+    role: String,
+    token: String,
+    response: String,
+}
+
+fn env_or(name: &str, fallback: &str) -> String {
+    std::env::var(name).unwrap_or_else(|_| fallback.to_string())
+}
+
+async fn login(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(payload): Json<LoginRequest>,
+) -> impl IntoResponse {
+    let ip = addr.ip().to_string();
+
+    // Credenciales (con defaults)
+    let admin_user = env_or("MOLTBOT_ADMIN_USER", "admin");
+    let admin_pass = env_or("MOLTBOT_ADMIN_PASS", "admin123");
+    let user_user = env_or("MOLTBOT_USER_USER", "user");
+    let user_pass = env_or("MOLTBOT_USER_PASS", "user123");
+
+    // Tokens reales (deben existir como env)
+    let admin_token = std::env::var("MOLTBOT_ADMIN_TOKEN").unwrap_or_default();
+    let user_token = std::env::var("MOLTBOT_USER_TOKEN").unwrap_or_default();
+
+    // ADMIN
+    if payload.user == admin_user && payload.pass == admin_pass && !admin_token.is_empty() {
+        logger::log(&ip, "ADMIN", "LOGIN", "", true);
+        return (
+            StatusCode::OK,
+            Json(LoginResponse {
+                ok: true,
+                role: "ADMIN".to_string(),
+                token: admin_token,
+                response: "LOGIN_OK".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    // USER
+    if payload.user == user_user && payload.pass == user_pass && !user_token.is_empty() {
+        logger::log(&ip, "USER", "LOGIN", "", true);
+        return (
+            StatusCode::OK,
+            Json(LoginResponse {
+                ok: true,
+                role: "USER".to_string(),
+                token: user_token,
+                response: "LOGIN_OK".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    // FAIL
+    logger::log(&ip, "UNKNOWN", "LOGIN", "", false);
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(LoginResponse {
+            ok: false,
+            role: "UNKNOWN".to_string(),
+            token: "".to_string(),
+            response: "UNAUTHORIZED".to_string(),
+        }),
+    )
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -114,7 +209,13 @@ async fn help() -> Json<HelpResponse> {
     Json(HelpResponse {
         name: "moltbot",
         version: env!("CARGO_PKG_VERSION"),
-        endpoints: vec!["GET /ping", "GET /help", "POST /cmd"],
+        endpoints: vec![
+            "GET /ping",
+            "GET /help",
+            "GET /status",
+            "POST /login",
+            "POST /cmd",
+        ],
         commands: vec![
             "PING",
             "NOTA",
