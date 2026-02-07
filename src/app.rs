@@ -17,6 +17,7 @@ pub fn build_router() -> Router {
         .route("/help", get(help))
         .route("/status", get(status))
         .route("/login", post(login))
+        .route("/auth/verify", post(verify_token)) // 👈 NUEVO
         .route("/cmd", post(cmd))
 }
 
@@ -53,6 +54,65 @@ struct LoginResponse {
     role: String,
     token: String,
     response: String,
+}
+
+#[derive(Deserialize)]
+struct VerifyTokenRequest {
+    token: String,
+}
+
+#[derive(Serialize)]
+struct VerifyTokenResponse {
+    ok: bool,
+    role: String,
+    response: String,
+}
+
+async fn verify_token(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(payload): Json<VerifyTokenRequest>,
+) -> impl IntoResponse {
+
+    println!("VERIFY: entro a verify_token");
+    println!("VERIFY: token len={}", payload.token.len());
+
+    let ip = addr.ip().to_string();
+
+    println!("VERIFY: llamando auth::rol()");
+
+    match auth::rol(&payload.token) {
+        Some(role) => {
+            let role_str = match role {
+                auth::Rol::Admin => "ADMIN",
+                auth::Rol::User => "USER",
+            };
+
+            logger::log(&ip, role_str, "VERIFY", "", true);
+
+            (
+                StatusCode::OK,
+                Json(VerifyTokenResponse {
+                    ok: true,
+                    role: role_str.to_string(),
+                    response: "TOKEN_OK".to_string(),
+                }),
+            )
+                .into_response()
+        }
+        None => {
+            logger::log(&ip, "UNKNOWN", "VERIFY", "", false);
+
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(VerifyTokenResponse {
+                    ok: false,
+                    role: "UNKNOWN".to_string(),
+                    response: "UNAUTHORIZED".to_string(),
+                }),
+            )
+                .into_response()
+        }
+    }
 }
 
 fn env_or(name: &str, fallback: &str) -> String {

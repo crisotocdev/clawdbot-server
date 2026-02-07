@@ -2,6 +2,7 @@
 name = "moltbot_server"
 version = "0.1.0"
 edition = "2024"
+default-run = "moltbot_server"
 
 [dependencies]
 axum = "0.7"
@@ -9,8 +10,11 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = "0.4"
-reqwest = { version = "0.12", features = ["blocking", "json"] }
+dotenvy = "0.15"
+
+# --- Cliente CLI ---
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+dirs = "5"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
-

@@ -1,0 +1,7 @@
+Próximo objetivo (para mañana)
+
+Guardar token automáticamente en ~/.moltbot/token.txt
+
+Que el cliente lo lea solo (sin usar env)
+
+Empezar estructura base para React Native
