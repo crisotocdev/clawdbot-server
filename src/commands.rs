@@ -4,6 +4,8 @@ use std::time::Instant;
 use crate::auth::Rol;
 use crate::powershell;
 
+use sysinfo::System;
+
 fn format_uptime(started_at: Instant) -> String {
     let secs = started_at.elapsed().as_secs();
 
@@ -52,14 +54,44 @@ pub fn handle_message(role: Rol, msg: &str, started_at: Instant) -> (bool, Strin
             format!("MOLTBOT_VERSION {}", env!("CARGO_PKG_VERSION")),
         ),
 
-        "STATUS" => (
-            true,
-            format!(
-                "SERVER ONLINE\nVERSION {}\nUPTIME {}",
-                env!("CARGO_PKG_VERSION"),
-                format_uptime(started_at)
-            ),
-        ),
+        "STATUS" => {
+            let mut sys = System::new_all();
+            sys.refresh_all();
+
+            let uptime = format_uptime(started_at);
+            let version = env!("CARGO_PKG_VERSION");
+
+            // Memoria (MB)
+            let total_mem = sys.total_memory() as f64 / 1024.0 / 1024.0;
+            let used_mem = sys.used_memory() as f64 / 1024.0 / 1024.0;
+
+            // CPU (puede devolver 0 en el primer refresh, es normal)
+            let cpu = sys.global_cpu_info().cpu_usage();
+
+            let os = std::env::consts::OS;
+            let pid = std::process::id();
+
+            (
+                true,
+                format!(
+                    "=== SYSTEM STATUS ===\n\
+STATUS: ONLINE\n\
+VERSION: {}\n\
+UPTIME: {}\n\
+OS: {}\n\
+PID: {}\n\
+CPU: {:.2}%\n\
+RAM: {:.2} / {:.2} MB",
+                    version,
+                    uptime,
+                    os,
+                    pid,
+                    cpu,
+                    used_mem,
+                    total_mem
+                ),
+            )
+        }
 
         "HELP" => (
             true,
