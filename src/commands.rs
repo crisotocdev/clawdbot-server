@@ -3,8 +3,21 @@ use std::time::Instant;
 
 use crate::auth::Rol;
 use crate::powershell;
+use serde::Serialize;
 
 use sysinfo::System;
+
+#[derive(Serialize)]
+struct StatusResponse {
+    status: String,
+    version: String,
+    uptime: String,
+    os: String,
+    pid: u32,
+    cpu: f32,
+    ram_used: f64,
+    ram_total: f64,
+}
 
 fn format_uptime(started_at: Instant) -> String {
     let secs = started_at.elapsed().as_secs();
@@ -58,59 +71,41 @@ pub fn handle_message(role: Rol, msg: &str, started_at: Instant) -> (bool, Strin
             let mut sys = System::new_all();
             sys.refresh_all();
 
-            let uptime = format_uptime(started_at);
-            let version = env!("CARGO_PKG_VERSION");
-
-            // Memoria (MB)
-            let total_mem = sys.total_memory() as f64 / 1024.0 / 1024.0;
-            let used_mem = sys.used_memory() as f64 / 1024.0 / 1024.0;
-
-            // CPU (puede devolver 0 en el primer refresh, es normal)
-            let cpu = sys.global_cpu_info().cpu_usage();
-
-            let os = std::env::consts::OS;
-            let pid = std::process::id();
+            let resp = StatusResponse {
+                status: "online".to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                uptime: format_uptime(started_at),
+                os: std::env::consts::OS.to_string(),
+                pid: std::process::id(),
+                cpu: sys.global_cpu_info().cpu_usage(),
+                ram_used: sys.used_memory() as f64 / 1024.0 / 1024.0,
+                ram_total: sys.total_memory() as f64 / 1024.0 / 1024.0,
+            };
 
             (
                 true,
-                format!(
-                    "=== SYSTEM STATUS ===\n\
-STATUS: ONLINE\n\
-VERSION: {}\n\
-UPTIME: {}\n\
-OS: {}\n\
-PID: {}\n\
-CPU: {:.2}%\n\
-RAM: {:.2} / {:.2} MB",
-                    version,
-                    uptime,
-                    os,
-                    pid,
-                    cpu,
-                    used_mem,
-                    total_mem
-                ),
+                serde_json::to_string_pretty(&resp).unwrap()
             )
         }
 
-        "HELP" => (
-            true,
-            [
-                "PING",
-                "TIME",
-                "PROCESOS",
-                "WHOAMI",
-                "SYSINFO",
-                "STATUS",
-                "HELP",
-                "VERSION",
-                "NOTA",
-                "VSCODE",
-                "CHROME",
-                "PS",
-            ]
-            .join("\n"),
-        ),
+                "HELP" => (
+                    true,
+                    [
+                        "PING",
+                        "TIME",
+                        "PROCESOS",
+                        "WHOAMI",
+                        "SYSINFO",
+                        "STATUS",
+                        "HELP",
+                        "VERSION",
+                        "NOTA",
+                        "VSCODE",
+                        "CHROME",
+                        "PS",
+                    ]
+                    .join("\n"),
+                ),
 
         // =========================
         // ADMIN ONLY
