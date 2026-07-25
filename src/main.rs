@@ -22,9 +22,7 @@ async fn main() {
 
     let app = app::build_router();
 
-    let addr: SocketAddr = "0.0.0.0:8080"
-        .parse()
-        .expect("Dirección inválida");
+    let addr: SocketAddr = "0.0.0.0:8080".parse().expect("Dirección inválida");
 
     println!("🌐 HTTP server escuchando en http://{}", addr);
 
