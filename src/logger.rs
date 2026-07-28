@@ -1,5 +1,5 @@
 use chrono::Local;
-use std::fs::{create_dir_all, OpenOptions};
+use std::fs::{OpenOptions, create_dir_all};
 use std::io::Write;
 
 const LOG_DIR: &str = "logs";

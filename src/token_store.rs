@@ -46,11 +46,7 @@ pub fn load_token() -> io::Result<Option<String>> {
 
     let raw = fs::read_to_string(path)?;
     let t = raw.trim().to_string();
-    if t.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(t))
-    }
+    if t.is_empty() { Ok(None) } else { Ok(Some(t)) }
 }
 
 // Mantengo tu nombre para no romper el CLI actual

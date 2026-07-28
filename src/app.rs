@@ -1,14 +1,14 @@
+use axum::http::{Method, header};
 use axum::{
+    Json, Router,
     extract::ConnectInfo,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
-use axum::http::{header, Method};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::OnceLock;
 use std::time::Instant;
 use tower_http::cors::{Any, CorsLayer};
